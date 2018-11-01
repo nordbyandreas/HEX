@@ -9,6 +9,7 @@ import node as Node
 import state as State
 import mcts as MCTS
 import hexboard as HB
+import tflowtools as TFT
 
 class HexTrainer():
     def __init__(self, numGames=10, hexSize=2, verbose=True, numSimulations=10, player=1):
@@ -38,6 +39,8 @@ class HexTrainer():
         # randomly init weights and biases for Actor network
 
         self.Anet.setupSession()
+        self.Anet.error_history = []
+        self.Anet.validation_history = []
 
 
         startNode = Node.Node(state=State.State(player=self.player, hexSize=self.hexSize))
@@ -60,6 +63,7 @@ class HexTrainer():
 
             #clear replay buffer
             self.replayBuffer = []
+            
 
 
             #initialize gameboard to empty board
@@ -119,6 +123,10 @@ class HexTrainer():
             
             # train ANET on random minibatch of cases from replayBuffer
             np.random.shuffle(self.replayBuffer)
+            
+
+            #TODO write a custom do_training method
+
             inputs = [case[0] for case in self.replayBuffer]; targets = [case[1] for case in self.replayBuffer] 
             print("inputs:")
             print(inputs)
@@ -126,8 +134,10 @@ class HexTrainer():
             print(targets)
             feeder = {self.Anet.input: inputs, self.Anet.target: targets}
             gvars = [self.Anet.error] + self.Anet.grabvars
-            self.Anet.run_one_step([self.Anet.trainer], gvars, session=self.Anet.current_session, feed_dict=feeder)
-                       
+            _, grabvals, _ = self.Anet.run_one_step([self.Anet.trainer], gvars, session=self.Anet.current_session, feed_dict=feeder)
+            error = grabvals[0]
+            self.Anet.error_history.append((gc, error))
+
             
             # if gameNum %modulo saveinterval: save ANET parameters for later use in TOPP
 
@@ -140,9 +150,15 @@ class HexTrainer():
         print("\nPlayer 1 started " + str(player1Starts) + " games and won " + str(player1Wins) + " of "  + str(self.numGames) + " games!   " + str((player1Wins/self.numGames*100)) + " % ")
         print("Player 2 started " + str(player2Starts) + " games and won " + str(player2Wins) + " of "  + str(self.numGames) + " games!   " + str((player2Wins/self.numGames*100)) + " % ")
         print("\n")
-
+        TFT.plot_training_history(self.Anet.error_history, self.Anet.validation_history,xtitle="Game",ytitle="Error",
+                                   title="",fig=True)
 
         self.Anet.close_current_session(view=False)
+
+        #loop to keep program from closing at the end so we can view the graph
+        x = ""
+        while x == "":
+            x = str(input("enter any key to quit"))
 
 
 
@@ -156,7 +172,7 @@ class HexTrainer():
 
 # entry for starting the training
 def main():
-   trainer = HexTrainer(numGames=1, hexSize=3, verbose=True, numSimulations = 1, player=1)
+   trainer = HexTrainer(numGames=100, hexSize=3, verbose=True, numSimulations = 100, player=1)
    trainer.run()
    print(trainer.replayBuffer)
 

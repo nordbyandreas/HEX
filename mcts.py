@@ -73,10 +73,18 @@ class MCTS:
         for node in children:
             Dpre.append(node.getState().getVisitCount())
         D = [0]*(node.getState().getBoard().hexSize * node.getState().getBoard().hexSize)
+        print("\n DEBUG")
+        print(lMoves)
+        print(D)
+        print(Dpre)
         for move in range(0, len(lMoves)):
             if lMoves[move] == 1:
-                D[move] = Dpre.pop(0)
-
+                D[move] = Dpre.pop(0) 
+        print("\n")
+        print(lMoves)
+        print(D)
+        print(Dpre)
+        print("DEBUG\n")
         Dnorm = [float(i)/sum(D) for i in D]
         
         
